@@ -1,17 +1,19 @@
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         String[] texts = new String[25];
         for (int i = 0; i < texts.length; i++) {
             texts[i] = generateText("aab", 30_000);
         }
 
         long startTs = System.currentTimeMillis(); // start time
-        List<Thread> threads = new ArrayList<>();
+        ExecutorService service = Executors.newFixedThreadPool(10);
+        List<Future<Integer>> tasks = new ArrayList<>();
         for (String text : texts) {
-            threads.add(new Thread(() -> {
+            tasks.add(service.submit(() -> {
                 int maxSize = 0;
                 for (int i = 0; i < text.length(); i++) {
                     for (int j = 0; j < text.length(); j++) {
@@ -30,18 +32,22 @@ public class Main {
                         }
                     }
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
+                return maxSize;
+//                System.out.println(text.substring(0, 100) + " -> " + maxSize);
             }));
-            threads.get(threads.size() - 1).start();
         }
 
-        for (Thread thread : threads) {
-            thread.join();
+//        long endTs = System.currentTimeMillis(); // end time
+
+//        System.out.println("Time: " + (endTs - startTs) + "ms");
+        int maxTasksSize = 0;
+        for (int i = 0; i < tasks.size(); i++) {
+            int value = tasks.get(i).get().intValue();
+            if (value > maxTasksSize) {
+                maxTasksSize = value;
+            }
         }
-
-        long endTs = System.currentTimeMillis(); // end time
-
-        System.out.println("Time: " + (endTs - startTs) + "ms");
+        System.out.println("Максимальный интервал значений среди всех строк: " + maxTasksSize);
     }
 
     public static String generateText(String letters, int length) {
